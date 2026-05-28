@@ -2655,6 +2655,19 @@ void OF_FCN(ofcurveartist_setpattern)(int *factor, unsigned short *pattern)
     }
 }
 
+OF_EXPORT void OF_FCN(ofcurveartist_setshader)(OF_CHARARG(fname))
+{
+	CurveArtist *artist = dynamic_cast<CurveArtist*>(_objs->_currArtist);
+    if (artist) {
+      // Convert given character string and length to a proper C string
+      std::string temp(OF_STRING(fname));
+      _objs->_intVal = !artist->setShader(temp);
+    }
+    else {
+      _objs->_intVal = -2;
+    }
+}
+
 /************************************************
 	SegmentArtist Functions
 ************************************************/
@@ -2856,6 +2869,19 @@ void OF_FCN(ofsegmentartist_setpattern)(int *factor, unsigned short *pattern)
     if (artist) {
 	  artist->setPattern(*factor, *pattern);
 	  _objs->_intVal = 0;
+    }
+    else {
+      _objs->_intVal = -2;
+    }
+}
+
+OF_EXPORT void OF_FCN(ofsegmentartist_setshader)(OF_CHARARG(fname))
+{
+	SegmentArtist *artist = dynamic_cast<SegmentArtist*>(_objs->_currArtist);
+    if (artist) {
+      // Convert given character string and length to a proper C string
+      std::string temp(OF_STRING(fname));
+      _objs->_intVal = !artist->setShader(temp);
     }
     else {
       _objs->_intVal = -2;

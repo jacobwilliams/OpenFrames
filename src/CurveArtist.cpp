@@ -21,6 +21,9 @@
 #include <OpenFrames/CurveArtist.hpp>
 #include <OpenFrames/DoubleSingleUtils.hpp>
 #include <osg/Geometry>
+#include <osg/Shader>
+#include <osg/Program>
+#include <osgDB/FileUtils>
 #include <climits>
 
 namespace OpenFrames
@@ -205,6 +208,10 @@ CurveArtist::CurveArtist(const Trajectory *traj)
 	stateset->setAttribute(_lineWidth.get());
 	stateset->setAttributeAndModes(_linePattern.get());
 
+  // Initialize shader for custom line effects (optional)
+  _fragShader = new osg::Shader(osg::Shader::FRAGMENT);
+  _program->addShader(_fragShader);
+
   // Initialize colors
   // Currently we use one color for the whole trajectory, but this can be
   // changed later for per-vertex colors
@@ -292,6 +299,33 @@ void CurveArtist::setWidth( float width )
 
 void CurveArtist::setPattern( GLint factor, GLushort pattern )
 {
+bool CurveArtist::setShader(const std::string &fname)
+{
+  // Remove shader if empty filename
+  if(fname.length() == 0)
+  {
+    _program->removeShader(_fragShader);
+    return true;
+  }
+
+  // Load shader source from file
+  std::string fullFile = osgDB::findDataFile(fname);
+  bool success = _fragShader->loadShaderSourceFromFile(fullFile);
+  if(!success)
+  {
+    OSG_WARN << "OpenFrames::CurveArtist ERROR: Shader file \'" << fname << "\' not properly loaded!" << std::endl;
+    return false;
+  }
+
+  // Make sure shader is attached to program
+  if(!_program->getShader(osg::Shader::FRAGMENT))
+  {
+    _program->addShader(_fragShader);
+  }
+
+  return true;
+}
+
 	_linePattern->setFactor(factor);
 	_linePattern->setPattern(pattern);
 }

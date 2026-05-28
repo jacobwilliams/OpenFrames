@@ -956,6 +956,11 @@
 	INTEGER(2), INTENT(IN) :: pattern
 	END SUBROUTINE
 
+	SUBROUTINE ofcurveartist_setshader(fname)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofcurveartist_setshader
+	CHARACTER(LEN=*), INTENT(IN) :: fname
+	END SUBROUTINE
+
 ! SegmentArtist functions
 
 	SUBROUTINE ofsegmentartist_create(name)
@@ -1012,6 +1017,11 @@
 	SUBROUTINE ofsegmentartist_setwidth(width)
 	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofsegmentartist_setwidth
 	REAL, INTENT(IN) :: width
+	END SUBROUTINE
+
+	SUBROUTINE ofsegmentartist_setshader(fname)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofsegmentartist_setshader
+	CHARACTER(LEN=*), INTENT(IN) :: fname
 	END SUBROUTINE
 
 	SUBROUTINE ofsegmentartist_setpattern(factor, pattern)

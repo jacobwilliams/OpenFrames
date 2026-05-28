@@ -28,6 +28,7 @@
 #include <OpenFrames/MarkerArtist.hpp>
 #include <OpenFrames/Model.hpp>
 #include <OpenFrames/RadialPlane.hpp>
+#include <OpenFrames/RectangularCone.hpp>
 #include <OpenFrames/ReferenceFrame.hpp>
 #include <OpenFrames/SegmentArtist.hpp>
 #include <OpenFrames/Sphere.hpp>
@@ -1987,6 +1988,111 @@ void OF_FCN(ofmodel_getmodelsize)(double *size)
     else {
         _objs->_intVal = -2;
     }
+}
+
+/***********************************************
+	RectangularCone Functions
+***********************************************/
+
+void OF_FCN(ofrectcone_create)(OF_CHARARG(name))
+{
+	// Convert given character string and length to a proper C string
+	std::string temp(OF_STRING(name));
+
+	_objs->_currFrame = new RectangularCone(temp);
+	_objs->_frameMap[temp] = _objs->_currFrame;
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_setprimaryangles)(double *xAngle, double *yAngle)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    cone->setPrimaryAngles(*xAngle, *yAngle);
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_setconelength)(double *length)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    cone->setConeLength(*length);
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_getconelength)(double *length)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    *length = cone->getConeLength();
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_setconecolor)(float *r, float *g, float *b, float *a)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    cone->setConeColor(*r, *g, *b, *a);
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_setlinecolor)(float *r, float *g, float *b, float *a)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    cone->setLineColor(*r, *g, *b, *a);
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_setdrawmode)(unsigned int *drawMode)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    cone->setDrawMode(*drawMode);
+    _objs->_intVal = 0;
+}
+
+void OF_FCN(ofrectcone_getdrawmode)(unsigned int *drawMode)
+{
+	// Make sure that the currently active ReferenceFrame is a RectangularCone
+	RectangularCone *cone = dynamic_cast<RectangularCone*>(_objs->_currFrame);
+    if (cone == NULL) {
+      _objs->_intVal = 1;
+      return;
+    }
+
+    *drawMode = cone->getDrawMode();
+    _objs->_intVal = 0;
 }
 
 /***********************************************

@@ -57,6 +57,13 @@
 	INTEGER, PARAMETER :: OF_YAXIS = 2 ! Use Y axis 
 	INTEGER, PARAMETER :: OF_ZAXIS = 4 ! Use Z axis
 
+! Constants that specify which cone components to draw (RectangularCone)
+	INTEGER, PARAMETER :: OFCONE_NONE = 0 ! Don't draw anything
+	INTEGER, PARAMETER :: OFCONE_SIDES = 1 ! Draw cone faces
+	INTEGER, PARAMETER :: OFCONE_EDGES = 2 ! Draw cone edges
+	INTEGER, PARAMETER :: OFCONE_BASE = 4 ! Draw base outline
+	INTEGER, PARAMETER :: OFCONE_ALL = 7 ! Draw all components
+
 ! Constants that specify relative view base reference frame
 	INTEGER, PARAMETER :: OFVIEW_ABSOLUTE = 0 ! Global reference frame
 	INTEGER, PARAMETER :: OFVIEW_RELATIVE = 1 ! Body-fixed frame
@@ -668,6 +675,53 @@
 	SUBROUTINE ofmodel_getmodelsize(size)
 	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofmodel_getmodelsize
 	REAL(8), INTENT(OUT) :: size
+	END SUBROUTINE
+
+! RectangularCone functions
+! A RectangularCone is a type of ReferenceFrame that draws a rectangular
+! field-of-view cone, commonly used for sensor/camera FOV visualization.
+! All ReferenceFrame functions also apply to it. To operate on a RectangularCone
+! you must first set it as the currently active ReferenceFrame by using
+! offrame_activate() (just like for any other ReferenceFrame).
+
+	SUBROUTINE ofrectcone_create(name)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_create
+	CHARACTER(LEN=*), INTENT(IN) :: name
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_setprimaryangles(xAngle, yAngle)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_setprimaryangles
+	REAL(8), INTENT(IN) :: xAngle, yAngle
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_setconelength(length)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_setconelength
+	REAL(8), INTENT(IN) :: length
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_getconelength(length)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_getconelength
+	REAL(8), INTENT(OUT) :: length
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_setconecolor(r, g, b, a)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_setconecolor
+	REAL, INTENT(IN) :: r, g, b, a
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_setlinecolor(r, g, b, a)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_setlinecolor
+	REAL, INTENT(IN) :: r, g, b, a
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_setdrawmode(drawMode)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_setdrawmode
+	INTEGER, INTENT(IN) :: drawMode
+	END SUBROUTINE
+
+	SUBROUTINE ofrectcone_getdrawmode(drawMode)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofrectcone_getdrawmode
+	INTEGER, INTENT(OUT) :: drawMode
 	END SUBROUTINE
 
 ! DrawableTrajectory functions

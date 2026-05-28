@@ -24,6 +24,7 @@
 #include <osg/Shader>
 #include <osg/Program>
 #include <osgDB/FileUtils>
+#include <osgDB/ReadFile>
 #include <climits>
 #include <algorithm>
 
@@ -311,6 +312,10 @@ void SegmentArtist::setWidth( float width )
 
 void SegmentArtist::setPattern( GLint factor, GLushort pattern )
 {
+	_linePattern->setFactor(factor);
+	_linePattern->setPattern(pattern);
+}
+
 bool SegmentArtist::setShader(const std::string &fname)
 {
   // Remove shader if empty filename
@@ -320,26 +325,24 @@ bool SegmentArtist::setShader(const std::string &fname)
     return true;
   }
 
-  // Load shader source from file
-  std::string fullFile = osgDB::findDataFile(fname);
-  bool success = _fragShader->loadShaderSourceFromFile(fullFile);
-  if(!success)
+  // Load shader source from file using the non-deprecated osgDB API
+  osg::ref_ptr<osg::Shader> tmpShader = osgDB::readRefShaderFile(osg::Shader::FRAGMENT, fname);
+  if(!tmpShader.valid())
   {
     OSG_WARN << "OpenFrames::SegmentArtist ERROR: Shader file \'" << fname << "\' not properly loaded!" << std::endl;
     return false;
   }
+  _fragShader->setShaderSource(tmpShader->getShaderSource());
 
-  // Make sure shader is attached to program
-  if(!_program->getShader(osg::Shader::FRAGMENT))
+  // Re-attach shader to program if it was previously removed
+  bool attached = false;
+  for(unsigned int i = 0; i < _program->getNumShaders(); ++i)
   {
-    _program->addShader(_fragShader);
+    if(_program->getShader(i) == _fragShader.get()) { attached = true; break; }
   }
+  if(!attached) _program->addShader(_fragShader);
 
   return true;
-}
-
-	_linePattern->setFactor(factor);
-	_linePattern->setPattern(pattern);
 }
 
 void SegmentArtist::dataCleared(const Trajectory* traj)

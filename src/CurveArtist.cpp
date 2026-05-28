@@ -24,6 +24,7 @@
 #include <osg/Shader>
 #include <osg/Program>
 #include <osgDB/FileUtils>
+#include <osgDB/ReadFile>
 #include <climits>
 
 namespace OpenFrames
@@ -110,6 +111,10 @@ public:
       _vertexHigh->dirty();
       _vertexLow->dirty();
     }
+
+    // Keep of_NumVertices uniform in sync so traveling-pulse shaders know the line length
+    osg::Uniform* numVertsUniform = _ca->getOrCreateStateSet()->getUniform("of_NumVertices");
+    if(numVertsUniform) numVertsUniform->set((float)_drawArrays->getCount());
 
     // Continue traversing as needed
     return traverse(object, data);
@@ -208,9 +213,11 @@ CurveArtist::CurveArtist(const Trajectory *traj)
 	stateset->setAttribute(_lineWidth.get());
 	stateset->setAttributeAndModes(_linePattern.get());
 
-  // Initialize shader for custom line effects (optional)
+  // Initialize shader for custom line effects (optional, added to program on demand)
   _fragShader = new osg::Shader(osg::Shader::FRAGMENT);
-  _program->addShader(_fragShader);
+
+  // Uniform holding total vertex count; used by traveling-pulse shaders
+  stateset->addUniform(new osg::Uniform("of_NumVertices", 0.0f));
 
   // Initialize colors
   // Currently we use one color for the whole trajectory, but this can be
@@ -299,6 +306,10 @@ void CurveArtist::setWidth( float width )
 
 void CurveArtist::setPattern( GLint factor, GLushort pattern )
 {
+	_linePattern->setFactor(factor);
+	_linePattern->setPattern(pattern);
+}
+
 bool CurveArtist::setShader(const std::string &fname)
 {
   // Remove shader if empty filename
@@ -308,26 +319,24 @@ bool CurveArtist::setShader(const std::string &fname)
     return true;
   }
 
-  // Load shader source from file
-  std::string fullFile = osgDB::findDataFile(fname);
-  bool success = _fragShader->loadShaderSourceFromFile(fullFile);
-  if(!success)
+  // Load shader source from file using the non-deprecated osgDB API
+  osg::ref_ptr<osg::Shader> tmpShader = osgDB::readRefShaderFile(osg::Shader::FRAGMENT, fname);
+  if(!tmpShader.valid())
   {
     OSG_WARN << "OpenFrames::CurveArtist ERROR: Shader file \'" << fname << "\' not properly loaded!" << std::endl;
     return false;
   }
+  _fragShader->setShaderSource(tmpShader->getShaderSource());
 
-  // Make sure shader is attached to program
-  if(!_program->getShader(osg::Shader::FRAGMENT))
+  // Re-attach shader to program if it was previously removed
+  bool attached = false;
+  for(unsigned int i = 0; i < _program->getNumShaders(); ++i)
   {
-    _program->addShader(_fragShader);
+    if(_program->getShader(i) == _fragShader.get()) { attached = true; break; }
   }
+  if(!attached) _program->addShader(_fragShader);
 
   return true;
-}
-
-	_linePattern->setFactor(factor);
-	_linePattern->setPattern(pattern);
 }
 
 void CurveArtist::dataCleared(const Trajectory* traj)

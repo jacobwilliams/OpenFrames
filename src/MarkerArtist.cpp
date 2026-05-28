@@ -700,14 +700,14 @@ bool MarkerArtist::setMarkerShader(const std::string &fname)
     return true;
   }
 
-  // Load shader source from file
-  std::string fullFile = osgDB::findDataFile(fname);
-  bool success = _fragShader->loadShaderSourceFromFile(fullFile);
-  if(!success)
+  // Load shader source from file using the non-deprecated osgDB API
+  osg::ref_ptr<osg::Shader> tmpShader = osgDB::readRefShaderFile(osg::Shader::FRAGMENT, fname);
+  if(!tmpShader.valid())
   {
     OSG_WARN << "OpenFrames::MarkerArtist ERROR: Shader file \'" << fname << "\' not properly loaded!" << std::endl;
     return false;
   }
+  _fragShader->setShaderSource(tmpShader->getShaderSource());
 
   return true;
 }

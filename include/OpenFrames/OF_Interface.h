@@ -1768,6 +1768,17 @@ OF_EXPORT void OF_FCN(ofcurveartist_setwidth)(float *width);
 */
 OF_EXPORT void OF_FCN(ofcurveartist_setpattern)(int *factor, unsigned short *pattern);
 
+/*
+ * \brief Set GLSL fragment shader used to draw the curve, overriding any existing shader.
+ *
+ * If an empty string is provided, the shader is reset to default.
+ *
+ * This applies to the current active CurveArtist.
+ *
+ * \param fname File containing the shader source.
+ */
+OF_EXPORT void OF_FCN(ofcurveartist_setshader)(OF_CHARARG(fname));
+
 /*****************************************************************
 	SegmentArtist Functions
 A SegmentArtist is a type of TrajectoryArtist that allows arbitrary
@@ -1911,6 +1922,17 @@ OF_EXPORT void OF_FCN(ofsegmentartist_setwidth)(float *width);
  * \param pattern 16-bit integer which specifies the line pattern.
  */
 OF_EXPORT void OF_FCN(ofsegmentartist_setpattern)(int *factor, unsigned short *pattern);
+
+/*
+ * \brief Set GLSL fragment shader used to draw segments, overriding any existing shader.
+ *
+ * If an empty string is provided, the shader is reset to default.
+ *
+ * This applies to the current active SegmentArtist.
+ *
+ * \param fname File containing the shader source.
+ */
+OF_EXPORT void OF_FCN(ofsegmentartist_setshader)(OF_CHARARG(fname));
 
 /*****************************************************************
 	MarkerArtist Functions

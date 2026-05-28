@@ -45,6 +45,9 @@ static const char *OFTA_VertSource = {
   // Used by custom shaders like Line_Pulse.frag
   "varying float vertexLocation;\n"
 
+  // Raw vertex index, used with of_NumVertices uniform for full-line position
+  "varying float vertexRawID;\n"
+
   "void main(void)\n"
   "{\n"
      // Low part of vertex - eye and associated numerical error
@@ -65,6 +68,7 @@ static const char *OFTA_VertSource = {
 
      // Compute vertex location for line shaders (0 or 1 for alternating vertices)
   "  vertexLocation = mod(float(gl_VertexID), 2.0);\n"
+  "  vertexRawID = float(gl_VertexID);\n"
   "}\n"
 };
 

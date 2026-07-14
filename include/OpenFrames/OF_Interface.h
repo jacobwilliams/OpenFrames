@@ -1779,6 +1779,27 @@ OF_EXPORT void OF_FCN(ofcurveartist_setpattern)(int *factor, unsigned short *pat
  */
 OF_EXPORT void OF_FCN(ofcurveartist_setshader)(OF_CHARARG(fname));
 
+/*
+ * \brief Enable or disable trace mode for the curve.
+ *
+ * When trace mode is enabled, only the trajectory up to the current simulation time is drawn.
+ * The trajectory will smoothly interpolate between points as time progresses.
+ *
+ * This applies to the current active CurveArtist.
+ *
+ * \param enabled True to enable trace mode, false to disable.
+ */
+OF_EXPORT void OF_FCN(ofcurveartist_settracemode)(bool *enabled);
+
+/*
+ * \brief Get the current trace mode state.
+ *
+ * This applies to the current active CurveArtist.
+ *
+ * \param enabled Returns true if trace mode is enabled, false otherwise.
+ */
+OF_EXPORT void OF_FCN(ofcurveartist_gettracemode)(bool *enabled);
+
 /*****************************************************************
 	SegmentArtist Functions
 A SegmentArtist is a type of TrajectoryArtist that allows arbitrary

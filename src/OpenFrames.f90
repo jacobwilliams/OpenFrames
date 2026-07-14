@@ -907,6 +907,16 @@
 	CHARACTER(LEN=*), INTENT(IN) :: fname
 	END SUBROUTINE
 
+	SUBROUTINE ofcurveartist_settracemode(enabled)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofcurveartist_settracemode
+	LOGICAL, INTENT(IN) :: enabled
+	END SUBROUTINE
+
+	SUBROUTINE ofcurveartist_gettracemode(enabled)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofcurveartist_gettracemode
+	LOGICAL, INTENT(OUT) :: enabled
+	END SUBROUTINE
+
 ! SegmentArtist functions
 
 	SUBROUTINE ofsegmentartist_create(name)

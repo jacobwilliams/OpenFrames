@@ -35,7 +35,7 @@ class CurveArtistUpdateCallback : public osg::Callback
 {
 public:
   CurveArtistUpdateCallback()
-    : _dataAdded(true), _dataCleared(true), _batchSize(1000), _lastUpdateTime(0.0), _lastRunTime(0.0)
+    : _dataAdded(true), _dataCleared(true), _batchSize(1000), _lastUpdateTime(0.0), _lastRunTime(0.0), _lastTraceSimTime(-1.0)
   {}
 
   void dataAdded() { _dataAdded = true; }
@@ -68,9 +68,18 @@ public:
       clearVertexData();
       dirtyVertexData();
     }
-
     // Otherwise process trajectory points and update vertex data as needed
-    else if (_dataCleared || _dataAdded)
+    else
+    {
+      // In trace mode, check if simulation time has advanced to show more points
+      bool traceTimeChanged = false;
+      if (_ca->getTraceMode() && (simTime != _lastTraceSimTime))
+      {
+        traceTimeChanged = true;
+        _lastTraceSimTime = simTime;
+      }
+
+      if (_dataCleared || _dataAdded || traceTimeChanged)
     {
       // Clear all points if needed
       if (_dataCleared)
@@ -81,7 +90,7 @@ public:
       }
 
       // Process new data if needed
-      if (_dataAdded)
+      if (_dataAdded || traceTimeChanged)
       {
         // Get and lock trajectory so its data doesn't move while we're analyzing it
         _dataAdded = false;
@@ -101,17 +110,18 @@ public:
       }
     }
 
-    // If vertex arrays have not been modified in a while, then shink them
-    // to fit the current number of points
-    else if ((currTime - _lastUpdateTime >= 1.0) && (_vertexHigh->size() > _drawArrays->getCount()))
-    {
-      _vertexHigh->resize(_drawArrays->getCount());
-      _vertexLow->resize(_drawArrays->getCount());
-      _vertexHigh->asVector().shrink_to_fit();
-      _vertexLow->asVector().shrink_to_fit();
-      _vertexHigh->dirty();
-      _vertexLow->dirty();
-    }
+      // If vertex arrays have not been modified in a while, then shink them
+      // to fit the current number of points
+      else if ((currTime - _lastUpdateTime >= 1.0) && (_vertexHigh->size() > _drawArrays->getCount()))
+      {
+        _vertexHigh->resize(_drawArrays->getCount());
+        _vertexLow->resize(_drawArrays->getCount());
+        _vertexHigh->asVector().shrink_to_fit();
+        _vertexLow->asVector().shrink_to_fit();
+        _vertexHigh->dirty();
+        _vertexLow->dirty();
+      }
+    } // end else for valid data processing
 
     // Keep of_NumVertices uniform in sync so traveling-pulse shaders know the line length
     osg::Uniform* numVertsUniform = _ca->getOrCreateStateSet()->getUniform("of_NumVertices");
@@ -142,6 +152,10 @@ private:
   {
     // In trace mode, limit points to those at or before current simulation time
     unsigned int pointsToProcess = newNumPoints;
+    bool needsInterpolation = false;
+    unsigned int interpIdx = 0;
+    double interpFactor = 0.0;
+    
     if (_ca->getTraceMode())
     {
       const Trajectory::DataArray& timeList = _traj->getTimeList();
@@ -156,12 +170,29 @@ private:
         }
         else
         {
+          // We found the first point after simTime
+          // Interpolate between the last point before simTime and this point
+          if (pointsToProcess > 0)
+          {
+            unsigned int prevIdx = pointsToProcess - 1;
+            double t0 = timeList[prevIdx];
+            double t1 = timeList[i];
+            
+            // Calculate interpolation factor
+            if (t1 > t0)
+            {
+              interpFactor = (simTime - t0) / (t1 - t0);
+              interpIdx = pointsToProcess;  // Index where interpolated point will go
+              pointsToProcess++;  // Add one more point for interpolation
+              needsInterpolation = true;
+            }
+          }
           break; // Times are sequential, so we can stop here
         }
       }
     }
 
-    // Make space for new points
+    // Make space for new points (including potential interpolated point)
     if (pointsToProcess > _vertexHigh->size())
     {
       unsigned int newSize = std::ceil((double)pointsToProcess / (double)_batchSize);
@@ -170,24 +201,55 @@ private:
       _vertexLow->resize(newSize);
     }
 
-    // Process each new point
+    // Process each point that hasn't been processed yet
     osg::Vec3d newPoint;
     osg::Vec3f high, low;
-    for (unsigned int i = _drawArrays->getCount(); i < pointsToProcess; ++i)
+    unsigned int oldCount = _drawArrays->getCount();
+    
+    // In trace mode, we may need to recalculate the last point if it's interpolated
+    unsigned int startIdx = oldCount;
+    if (_ca->getTraceMode() && needsInterpolation && interpIdx < oldCount)
     {
-      _traj->getPoint(i, _ca->getDataSource(), newPoint._v); // Get current point
+      // The interpolated point was already added before but needs updating
+      startIdx = interpIdx;
+    }
+    
+    for (unsigned int i = startIdx; i < pointsToProcess; ++i)
+    {
+      // Check if this is the interpolated point
+      if (needsInterpolation && i == interpIdx)
+      {
+        // Get the two points to interpolate between
+        osg::Vec3d point0, point1;
+        _traj->getPoint(interpIdx - 1, _ca->getDataSource(), point0._v);
+        _traj->getPoint(interpIdx, _ca->getDataSource(), point1._v);
+        
+        // Interpolate position
+        newPoint = point0 + (point1 - point0) * interpFactor;
+      }
+      else
+      {
+        // Regular point from trajectory
+        _traj->getPoint(i, _ca->getDataSource(), newPoint._v);
+      }
 
       // Split point into high and low portions to support GPU-based RTE rendering
       OpenFrames::DS_Split(newPoint, high, low);
       (*_vertexHigh)[i] = high;
       (*_vertexLow)[i] = low;
     }
-    _drawArrays->setCount(pointsToProcess);
+    
+    // Update count if it changed (important for trace mode)
+    if (oldCount != pointsToProcess)
+    {
+      _drawArrays->setCount(pointsToProcess);
+    }
   }
 
   bool _dataAdded, _dataCleared;
   unsigned int _batchSize;
   double _lastUpdateTime, _lastRunTime;
+  double _lastTraceSimTime;  // Last simulation time used in trace mode
 
   osg::Geometry* _geom;
   osg::Vec3Array* _vertexHigh;

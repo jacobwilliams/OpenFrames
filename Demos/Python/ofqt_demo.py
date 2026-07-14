@@ -45,7 +45,7 @@ import OFInterfaces.PyOF as PyOF
 
 from qtpy.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
+    QSize, QTime, QUrl, Qt, QTimer)
 from qtpy.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
@@ -137,7 +137,22 @@ class MacMainWindow(QMainWindow, Ui_MainWindow):
         self.pauseButton.clicked.connect(self.togglePause)
         layout.addWidget(self.pauseButton)
         
+        # Add reset time button
+        self.resetTimeButton = QPushButton("Reset Time")
+        self.resetTimeButton.clicked.connect(self.resetTime)
+        layout.addWidget(self.resetTimeButton)
+        
+        # Add time display label
+        self.timeLabel = QLabel("Simulation Time: 0.00 s")
+        self.timeLabel.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(self.timeLabel)
+        
         layout.addStretch()
+        
+        # Set up timer to update time display
+        self.updateTimer = QTimer()
+        self.updateTimer.timeout.connect(self.updateTimeDisplay)
+        self.updateTimer.start(50)  # Update every 50ms
 
     def applyFont(self):
         pass
@@ -175,8 +190,23 @@ class MacMainWindow(QMainWindow, Ui_MainWindow):
             self.pauseButton.setText("Resume Time")
         else:
             self.pauseButton.setText("Pause Time")
+    
+    def resetTime(self):
+        """Reset simulation time to zero"""
+        ofWindow = self.ofDockWidget.ofwindow
+        ofWindow.resetTime()
+    
+    def updateTimeDisplay(self):
+        """Update the time display label with current simulation time"""
+        try:
+            ofWindow = self.ofDockWidget.ofwindow
+            simTime = ofWindow.windowProxy.getTime()
+            self.timeLabel.setText(f"Simulation Time: {simTime:.2f} s")
+        except Exception:
+            pass  # Window may not be fully initialized yet
         
     def closeEvent(self, event):
+        self.updateTimer.stop()
         self.ofDockWidget.stopRendering()
         
 class MyOFDemoWin1(PyQtOF.OFWindow):
@@ -332,7 +362,8 @@ class MyOFDemoWin2(PyQtOF.OFWindow):
         self.shaderEnabled = True
         
         # Set time scale for smooth playback of trace
-        self.windowProxy.setTimeScale(1.0)  # Real-time
+        # self.windowProxy.setTimeScale(1.0)  # Real-time
+        self.windowProxy.setTimeScale(0.2)  # slower
         self.isPaused = False
         self.windowProxy.pauseTime(False)  # Start with time running
     
@@ -353,6 +384,10 @@ class MyOFDemoWin2(PyQtOF.OFWindow):
         """Toggle pause/resume of simulation time"""
         self.isPaused = not self.isPaused
         self.windowProxy.pauseTime(self.isPaused)
+    
+    def resetTime(self):
+        """Reset simulation time to zero"""
+        self.windowProxy.setTime(0.0)
 
 class TabWindow(QWidget):
     """

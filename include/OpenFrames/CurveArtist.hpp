@@ -69,6 +69,11 @@ namespace OpenFrames
     void setPattern(GLint factor, GLushort pattern);
     bool setShader(const std::string &fname);
 
+    /** Trace mode draws trajectory only up to current time, not the entire future path.
+        Time is taken from the simulation time managed by WindowProxy. */
+    void setTraceMode(bool enabled);
+    bool getTraceMode() const { return _traceMode; }
+
     /** Data was cleared from or added to the trajectory. Inherited
         from TrajectoryArtist */
     virtual void dataCleared(const Trajectory* traj);
@@ -93,6 +98,9 @@ namespace OpenFrames
 
     mutable bool _dataValid; // If trajectory supports required data
     mutable bool _dataZero; // If we are just drawing at the origin
+
+    // Trace mode: draw trajectory only up to current time
+    bool _traceMode;
   };
 
 }

@@ -43,9 +43,10 @@ public:
 
   virtual bool run(osg::Object* object, osg::Object* data)
   {
-    // Get the current time
+    // Get the current times
     osg::NodeVisitor* nv = data->asNodeVisitor();
     double currTime = nv->getFrameStamp()->getReferenceTime();
+    double simTime = nv->getFrameStamp()->getSimulationTime();
 
     // Process points at fixed rate to avoid performance bottlenecks in high-FPS applications (e.g. VR)
     if (currTime - _lastRunTime < 0.05) return traverse(object, data);
@@ -90,7 +91,7 @@ public:
 
         // Process trajectory points
         unsigned int newNumPoints = _traj->getNumPoints(_ca->getDataSource());
-        processPoints(newNumPoints);
+        processPoints(newNumPoints, simTime);
 
         // Unlock trajectory
         _traj->unlockData();
@@ -137,12 +138,33 @@ private:
     _geom->dirtyBound();
   }
 
-  void processPoints(unsigned int newNumPoints)
+  void processPoints(unsigned int newNumPoints, double simTime)
   {
-    // Make space for new points
-    if (newNumPoints > _vertexHigh->size())
+    // In trace mode, limit points to those at or before current simulation time
+    unsigned int pointsToProcess = newNumPoints;
+    if (_ca->getTraceMode())
     {
-      unsigned int newSize = std::ceil((double)newNumPoints / (double)_batchSize);
+      const Trajectory::DataArray& timeList = _traj->getTimeList();
+      
+      // Find the last point at or before current simulation time
+      pointsToProcess = 0;
+      for (unsigned int i = 0; i < newNumPoints; ++i)
+      {
+        if (timeList[i] <= simTime)
+        {
+          pointsToProcess = i + 1;
+        }
+        else
+        {
+          break; // Times are sequential, so we can stop here
+        }
+      }
+    }
+
+    // Make space for new points
+    if (pointsToProcess > _vertexHigh->size())
+    {
+      unsigned int newSize = std::ceil((double)pointsToProcess / (double)_batchSize);
       newSize *= _batchSize;
       _vertexHigh->resize(newSize);
       _vertexLow->resize(newSize);
@@ -151,7 +173,7 @@ private:
     // Process each new point
     osg::Vec3d newPoint;
     osg::Vec3f high, low;
-    for (unsigned int i = _drawArrays->getCount(); i < newNumPoints; ++i)
+    for (unsigned int i = _drawArrays->getCount(); i < pointsToProcess; ++i)
     {
       _traj->getPoint(i, _ca->getDataSource(), newPoint._v); // Get current point
 
@@ -160,7 +182,7 @@ private:
       (*_vertexHigh)[i] = high;
       (*_vertexLow)[i] = low;
     }
-    _drawArrays->setCount(newNumPoints);
+    _drawArrays->setCount(pointsToProcess);
   }
 
   bool _dataAdded, _dataCleared;
@@ -176,7 +198,7 @@ private:
 };
 
 CurveArtist::CurveArtist(const Trajectory *traj)
-: _dataValid(false), _dataZero(false)
+: _dataValid(false), _dataZero(false), _traceMode(false)
 {
 	setTrajectory(traj); // Set the specified trajectory
 
@@ -337,6 +359,18 @@ bool CurveArtist::setShader(const std::string &fname)
   if(!attached) _program->addShader(_fragShader);
 
   return true;
+}
+
+void CurveArtist::setTraceMode(bool enabled)
+{
+  if(_traceMode != enabled)
+  {
+    _traceMode = enabled;
+    // Mark data as changed so update callback reprocesses points
+    CurveArtistUpdateCallback *cb = static_cast<CurveArtistUpdateCallback*>(getUpdateCallback());
+    cb->dataCleared();
+    cb->dataAdded();
+  }
 }
 
 void CurveArtist::dataCleared(const Trajectory* traj)

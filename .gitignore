@@ -32,3 +32,6 @@ lib/
 # Doxygen generated files #
 docs/html
 docs/latex
+# pixi environments
+.pixi/*
+!.pixi/config.toml

@@ -226,10 +226,10 @@ private:
         // The interpolated point was already added before but needs updating
         startIdx = interpIdx;
       }
-      else if (oldCount > 0 && pointsToProcess >= oldCount)
+      else if (oldCount > 0 && pointsToProcess == oldCount)
       {
-        // Reprocess at least the last point because it might be an interpolated point
-        // from the previous frame that now needs to be replaced with actual data
+        // Same number of points means we're updating an interpolated end point
+        // Reprocess the last point to update its interpolated position
         startIdx = oldCount - 1;
       }
     }
@@ -449,10 +449,9 @@ void CurveArtist::setTraceMode(bool enabled)
   if(_traceMode != enabled)
   {
     TrajectoryArtist::setTraceMode(enabled); // Call base class
-    // Mark data as changed so update callback reprocesses points
+    // Mark data as cleared to force reprocessing from scratch
     CurveArtistUpdateCallback *cb = static_cast<CurveArtistUpdateCallback*>(getUpdateCallback());
     cb->dataCleared();
-    cb->dataAdded();
   }
 }
 

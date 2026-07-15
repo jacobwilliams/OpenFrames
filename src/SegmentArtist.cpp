@@ -36,11 +36,12 @@ public:
     _dataAdded(true),
     _dataCleared(true),
     _lastTraceSimTime(-1.0),
-    _lastTraceNumPoints(0)
+    _lastTraceNumPoints(0),
+    _lastTracePointIdx(0)
   {}
 
-  void dataAdded() { _dataAdded = true; }
-  void dataCleared() { _dataCleared = true; _lastTraceNumPoints = 0; }
+  void dataAdded() { _dataAdded = true; _lastTracePointIdx = 0; }
+  void dataCleared() { _dataCleared = true; _lastTraceNumPoints = 0; _lastTracePointIdx = 0; }
 
   virtual bool run(osg::Object* object, osg::Object* data)
   {
@@ -146,12 +147,22 @@ private:
       const Trajectory::DataArray& timeList = _traj->getTimeList();
       
       // Find the last point at or before current simulation time
+      // Use cached position for efficiency (time usually increases monotonically)
       pointsToProcess = 0;
-      for (unsigned int i = 0; i < newNumPoints; i += _sa->getStride())
+      unsigned int startSearch = (_lastTracePointIdx < newNumPoints) ? _lastTracePointIdx : 0;
+      
+      // Check if time went backwards - if so, search from beginning
+      if (startSearch > 0 && timeList[startSearch - 1] > simTime)
+      {
+        startSearch = 0;
+      }
+      
+      for (unsigned int i = startSearch; i < newNumPoints; i += _sa->getStride())
       {
         if (timeList[i] <= simTime)
         {
           pointsToProcess++;
+          _lastTracePointIdx = i; // Cache this position
         }
         else
         {
@@ -159,8 +170,8 @@ private:
         }
       }
       
-      // If we need to redraw from scratch (time went backwards or forward past existing points)
-      if (pointsToProcess < _lastTraceNumPoints || pointsToProcess > _lastTraceNumPoints + 1)
+      // Only clear and redraw if time went backwards significantly
+      if (pointsToProcess < _lastTraceNumPoints)
       {
         clearVertexData();
         _numPoints = 0;
@@ -177,7 +188,6 @@ private:
     osg::Vec3f high, low;
 
     // Process points from where we left off
-    unsigned int actualIndex = _lastTraceNumPoints * _sa->getStride();
     for (unsigned int pointIdx = _lastTraceNumPoints; pointIdx < pointsToProcess; ++pointIdx)
     {
       unsigned int i = pointIdx * _sa->getStride();
@@ -206,6 +216,7 @@ private:
   bool _dataAdded, _dataCleared;
   double _lastTraceSimTime;  // Last simulation time used in trace mode
   unsigned int _lastTraceNumPoints;  // Number of points drawn in last trace update
+  unsigned int _lastTracePointIdx;  // Cached index of last point found in trace mode
 
   osg::Geometry* _geom;
   osg::Vec3Array* _vertexHigh;
@@ -370,10 +381,9 @@ void SegmentArtist::setTraceMode(bool enabled)
   if(_traceMode != enabled)
   {
     TrajectoryArtist::setTraceMode(enabled); // Call base class
-    // Mark data as changed so update callback reprocesses points
+    // Mark data as cleared to force reprocessing from scratch
     SegmentArtistUpdateCallback *cb = static_cast<SegmentArtistUpdateCallback*>(getUpdateCallback());
     cb->dataCleared();
-    cb->dataAdded();
   }
 }
 void SegmentArtist::dataCleared(const Trajectory* traj)

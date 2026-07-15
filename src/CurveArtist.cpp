@@ -35,11 +35,11 @@ class CurveArtistUpdateCallback : public osg::Callback
 {
 public:
   CurveArtistUpdateCallback()
-    : _dataAdded(true), _dataCleared(true), _batchSize(1000), _lastUpdateTime(0.0), _lastRunTime(0.0), _lastTraceSimTime(-1.0)
+    : _dataAdded(true), _dataCleared(true), _batchSize(1000), _lastUpdateTime(0.0), _lastRunTime(0.0), _lastTraceSimTime(-1.0), _lastTracePointIdx(0)
   {}
 
-  void dataAdded() { _dataAdded = true; }
-  void dataCleared() { _dataCleared = true; }
+  void dataAdded() { _dataAdded = true; _lastTracePointIdx = 0; }
+  void dataCleared() { _dataCleared = true; _lastTracePointIdx = 0; }
 
   virtual bool run(osg::Object* object, osg::Object* data)
   {
@@ -161,12 +161,23 @@ private:
       const Trajectory::DataArray& timeList = _traj->getTimeList();
       
       // Find the last point at or before current simulation time
+      // Start search from cached position for efficiency (time usually increases monotonically)
       pointsToProcess = 0;
-      for (unsigned int i = 0; i < newNumPoints; ++i)
+      unsigned int startSearch = (_lastTracePointIdx < newNumPoints) ? _lastTracePointIdx : 0;
+      
+      // First, quickly check if we can start from cached position
+      if (startSearch > 0 && timeList[startSearch - 1] > simTime)
+      {
+        // Time went backwards, search from beginning
+        startSearch = 0;
+      }
+      
+      for (unsigned int i = startSearch; i < newNumPoints; ++i)
       {
         if (timeList[i] <= simTime)
         {
           pointsToProcess = i + 1;
+          _lastTracePointIdx = i; // Cache this position
         }
         else
         {
@@ -206,12 +217,21 @@ private:
     osg::Vec3f high, low;
     unsigned int oldCount = _drawArrays->getCount();
     
-    // In trace mode, we may need to recalculate the last point if it's interpolated
+    // In trace mode, we may need to recalculate points
     unsigned int startIdx = oldCount;
-    if (_ca->getTraceMode() && needsInterpolation && interpIdx < oldCount)
+    if (_ca->getTraceMode())
     {
-      // The interpolated point was already added before but needs updating
-      startIdx = interpIdx;
+      if (needsInterpolation && interpIdx < oldCount)
+      {
+        // The interpolated point was already added before but needs updating
+        startIdx = interpIdx;
+      }
+      else if (oldCount > 0 && pointsToProcess >= oldCount)
+      {
+        // Reprocess at least the last point because it might be an interpolated point
+        // from the previous frame that now needs to be replaced with actual data
+        startIdx = oldCount - 1;
+      }
     }
     
     for (unsigned int i = startIdx; i < pointsToProcess; ++i)
@@ -250,6 +270,7 @@ private:
   unsigned int _batchSize;
   double _lastUpdateTime, _lastRunTime;
   double _lastTraceSimTime;  // Last simulation time used in trace mode
+  unsigned int _lastTracePointIdx;  // Cached index of last point found in trace mode
 
   osg::Geometry* _geom;
   osg::Vec3Array* _vertexHigh;

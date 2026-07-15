@@ -34,16 +34,22 @@ public:
   SegmentArtistUpdateCallback()
     : _numPoints(0),
     _dataAdded(true),
-    _dataCleared(true)
+    _dataCleared(true),
+    _lastTraceSimTime(-1.0),
+    _lastTraceNumPoints(0)
   {}
 
   void dataAdded() { _dataAdded = true; }
-  void dataCleared() { _dataCleared = true; }
+  void dataCleared() { _dataCleared = true; _lastTraceNumPoints = 0; }
 
   virtual bool run(osg::Object* object, osg::Object* data)
   {
+    // Get simulation time for trace mode
+    osg::NodeVisitor* nv = data->asNodeVisitor();
+    double simTime = nv->getFrameStamp()->getSimulationTime();
+    
     // Get the arrays that hold vertex data
-    // Note that all object types are known, since this callback is only added to a CurveArtist
+    // Note that all object types are known, since this callback is only added to a SegmentArtist
     // This is why we don't have to use dynamic_cast
     _sa = static_cast<SegmentArtist*>(object);
     _geom = _sa->getDrawable(0)->asGeometry();
@@ -62,6 +68,14 @@ public:
     // Otherwise process trajectory points and update vertex data as needed
     else
     {
+      // In trace mode, check if we need to update based on time change
+      bool traceTimeChanged = false;
+      if (_sa->getTraceMode() && (simTime != _lastTraceSimTime))
+      {
+        traceTimeChanged = true;
+        _lastTraceSimTime = simTime;
+      }
+      
       // Clear all points if needed
       if (_dataCleared)
       {
@@ -71,8 +85,8 @@ public:
         _dataAdded = true; // Ensure arrays are marked as dirty
       }
 
-      // Process new data if needed
-      if (_dataAdded)
+      // Process new data if needed or if trace time changed
+      if (_dataAdded || traceTimeChanged)
       {
         // Get and lock trajectory so its data doesn't move while we're analyzing it
         _dataAdded = false;
@@ -83,13 +97,13 @@ public:
         unsigned int newNumPoints = std::min(_traj->getNumPoints(_sa->getStartDataSource()),
           _traj->getNumPoints(_sa->getEndDataSource()));
 
-        processPoints(newNumPoints);
+        processPoints(newNumPoints, simTime);
 
         // Unlock trajectory
         _traj->unlockData();
 
         // Mark data as changed
-        dirtyVertexData(newNumPoints);
+        dirtyVertexData(_lastTraceNumPoints);
       }
     }
 
@@ -123,13 +137,52 @@ private:
     }
   }
 
-  void processPoints(unsigned int newNumPoints)
+  void processPoints(unsigned int newNumPoints, double simTime)
   {
+    // In trace mode, filter points based on simulation time
+    unsigned int pointsToProcess = newNumPoints;
+    if (_sa->getTraceMode())
+    {
+      const Trajectory::DataArray& timeList = _traj->getTimeList();
+      
+      // Find the last point at or before current simulation time
+      pointsToProcess = 0;
+      for (unsigned int i = 0; i < newNumPoints; i += _sa->getStride())
+      {
+        if (timeList[i] <= simTime)
+        {
+          pointsToProcess++;
+        }
+        else
+        {
+          break; // Times are sequential, so we can stop here
+        }
+      }
+      
+      // If we need to redraw from scratch (time went backwards or forward past existing points)
+      if (pointsToProcess < _lastTraceNumPoints || pointsToProcess > _lastTraceNumPoints + 1)
+      {
+        clearVertexData();
+        _numPoints = 0;
+        _lastTraceNumPoints = 0;
+      }
+    }
+    else
+    {
+      // Not in trace mode - draw all points
+      pointsToProcess = (newNumPoints + _sa->getStride() - 1) / _sa->getStride(); // ceiling division
+    }
+    
     osg::Vec3d startVertex, endVertex;  // Start and end vertices for a point
     osg::Vec3f high, low;
 
-    for (unsigned int i = _numPoints; i < newNumPoints; i += _sa->getStride())
+    // Process points from where we left off
+    unsigned int actualIndex = _lastTraceNumPoints * _sa->getStride();
+    for (unsigned int pointIdx = _lastTraceNumPoints; pointIdx < pointsToProcess; ++pointIdx)
     {
+      unsigned int i = pointIdx * _sa->getStride();
+      if (i >= newNumPoints) break;
+      
       // Get start and end vertices for current point
       _traj->getPoint(i, _sa->getStartDataSource(), startVertex._v);
       _traj->getPoint(i, _sa->getEndDataSource(), endVertex._v);
@@ -144,10 +197,15 @@ private:
       _vertexHigh->push_back(high);
       _vertexLow->push_back(low);
     }
+    
+    _lastTraceNumPoints = pointsToProcess;
+    _numPoints = pointsToProcess;
   }
 
   unsigned int _numPoints;
   bool _dataAdded, _dataCleared;
+  double _lastTraceSimTime;  // Last simulation time used in trace mode
+  unsigned int _lastTraceNumPoints;  // Number of points drawn in last trace update
 
   osg::Geometry* _geom;
   osg::Vec3Array* _vertexHigh;
@@ -307,7 +365,17 @@ void SegmentArtist::setPattern( GLint factor, GLushort pattern )
 	_linePattern->setFactor(factor);
 	_linePattern->setPattern(pattern);
 }
-
+void SegmentArtist::setTraceMode(bool enabled)
+{
+  if(_traceMode != enabled)
+  {
+    TrajectoryArtist::setTraceMode(enabled); // Call base class
+    // Mark data as changed so update callback reprocesses points
+    SegmentArtistUpdateCallback *cb = static_cast<SegmentArtistUpdateCallback*>(getUpdateCallback());
+    cb->dataCleared();
+    cb->dataAdded();
+  }
+}
 void SegmentArtist::dataCleared(const Trajectory* traj)
 {
 	verifyData();

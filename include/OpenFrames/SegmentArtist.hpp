@@ -76,6 +76,9 @@ namespace OpenFrames
     void setWidth(float width);
     void setPattern(GLint factor, GLushort pattern);
 
+    /** Override to invalidate data when trace mode changes */
+    virtual void setTraceMode(bool enabled) override;
+
     /** Data was cleared from or added to the Trajectory. Inherited
         from TrajectoryArtist */
     virtual void dataCleared(const Trajectory* traj);

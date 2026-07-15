@@ -2562,9 +2562,9 @@ OF_EXPORT void OF_FCN(ofcurveartist_setshader)(OF_CHARARG(fname))
     }
 }
 
-OF_EXPORT void OF_FCN(ofcurveartist_settracemode)(bool *enabled)
+OF_EXPORT void OF_FCN(oftrajartist_settracemode)(bool *enabled)
 {
-	CurveArtist *artist = dynamic_cast<CurveArtist*>(_objs->_currArtist);
+	TrajectoryArtist *artist = dynamic_cast<TrajectoryArtist*>(_objs->_currArtist);
     if (artist) {
       artist->setTraceMode(*enabled);
       _objs->_intVal = 0;
@@ -2574,9 +2574,9 @@ OF_EXPORT void OF_FCN(ofcurveartist_settracemode)(bool *enabled)
     }
 }
 
-OF_EXPORT void OF_FCN(ofcurveartist_gettracemode)(bool *enabled)
+OF_EXPORT void OF_FCN(oftrajartist_gettracemode)(bool *enabled)
 {
-	CurveArtist *artist = dynamic_cast<CurveArtist*>(_objs->_currArtist);
+	TrajectoryArtist *artist = dynamic_cast<TrajectoryArtist*>(_objs->_currArtist);
     if (artist) {
       *enabled = artist->getTraceMode();
       _objs->_intVal = 0;

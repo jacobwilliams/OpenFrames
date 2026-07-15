@@ -907,13 +907,15 @@
 	CHARACTER(LEN=*), INTENT(IN) :: fname
 	END SUBROUTINE
 
-	SUBROUTINE ofcurveartist_settracemode(enabled)
-	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofcurveartist_settracemode
+! TrajectoryArtist functions (apply to all artist types)
+
+	SUBROUTINE oftrajartist_settracemode(enabled)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: oftrajartist_settracemode
 	LOGICAL, INTENT(IN) :: enabled
 	END SUBROUTINE
 
-	SUBROUTINE ofcurveartist_gettracemode(enabled)
-	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: ofcurveartist_gettracemode
+	SUBROUTINE oftrajartist_gettracemode(enabled)
+	!DEC$ ATTRIBUTES DLLIMPORT,C,REFERENCE :: oftrajartist_gettracemode
 	LOGICAL, INTENT(OUT) :: enabled
 	END SUBROUTINE
 

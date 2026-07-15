@@ -281,7 +281,7 @@ private:
 };
 
 CurveArtist::CurveArtist(const Trajectory *traj)
-: _dataValid(false), _dataZero(false), _traceMode(false)
+: _dataValid(false), _dataZero(false)
 {
 	setTrajectory(traj); // Set the specified trajectory
 
@@ -448,7 +448,7 @@ void CurveArtist::setTraceMode(bool enabled)
 {
   if(_traceMode != enabled)
   {
-    _traceMode = enabled;
+    TrajectoryArtist::setTraceMode(enabled); // Call base class
     // Mark data as changed so update callback reprocesses points
     CurveArtistUpdateCallback *cb = static_cast<CurveArtistUpdateCallback*>(getUpdateCallback());
     cb->dataCleared();

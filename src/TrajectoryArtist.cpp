@@ -73,6 +73,7 @@ static const char *OFTA_VertSource = {
 };
 
 TrajectoryArtist::TrajectoryArtist() 
+: _traceMode(false)
 {
   // Create vertex shader
   osg::Shader *vertShader = new osg::Shader(osg::Shader::VERTEX, OFTA_VertSource);

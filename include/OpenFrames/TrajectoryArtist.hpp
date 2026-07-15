@@ -64,11 +64,18 @@ namespace OpenFrames
         implemented by derived classes. */
     virtual void dataAdded(const Trajectory* traj) = 0;
 
+    /** Enable/disable trace mode. When enabled, only trajectory points
+        up to the current simulation time are drawn. Derived classes can
+        override to perform additional actions when trace mode changes. */
+    virtual void setTraceMode(bool enabled) { _traceMode = enabled; }
+    bool getTraceMode() const { return _traceMode; }
+
   protected:
     virtual ~TrajectoryArtist();
 
     osg::ref_ptr<const Trajectory> _traj; // Trajectory to be drawn
     osg::ref_ptr<osg::Program> _program; // GLSL program
+    bool _traceMode; // Whether to limit drawing to points before current time
   };
 
 }
